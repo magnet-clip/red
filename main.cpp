@@ -219,7 +219,7 @@ function<void()> PerformanceTester(string folder) {
   return [folder]() { PerformanceTest(folder); };
 }
 
-// #define TEST
+#define TEST
 #define PERF
 #define N 100'000
 
