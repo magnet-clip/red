@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <functional>
 #include <iterator>
 #include <map>
 #include <random>
@@ -176,9 +177,12 @@ void TestBasicSearch() {
   TestFunctionality(docs, queries, expected);
 }
 
+#define STR_HELPER(N) #N
+#define STR(N) STR_HELPER(N)
+
 #define PERFORM(fun, N)                                                        \
   do {                                                                         \
-    LOG_DURATION(#fun);                                                        \
+    LOG_DURATION(#fun " x " STR(N) " times");                                  \
     for (size_t i = 0; i < N; i++) {                                           \
       fun();                                                                   \
     }                                                                          \
@@ -192,14 +196,45 @@ void AllTests() {
   TestBasicSearch();
 }
 
+void PerformanceTest(string folder) {
+  ifstream docs_input("../test/" + folder + "/documents.txt");
+  if (!docs_input) {
+    cerr << "Can't read docs file" << endl;
+    return;
+  };
+  ifstream queries_input("../test/" + folder + "/queries.txt");
+  if (!queries_input) {
+    cerr << "Can't read queries file" << endl;
+    return;
+  };
+  SearchServer srv;
+  srv.UpdateDocumentBase(docs_input);
+  ostringstream queries_output;
+  srv.AddQueriesStream(queries_input, queries_output);
+  const string result = queries_output.str();
+  // cout << "[" << result << "]" << endl;
+}
+
+function<void()> PerformanceTester(string folder) {
+  return [folder]() { PerformanceTest(folder); };
+}
+
+// #define TEST
+#define PERF
+#define N 100'000
+
 int main() {
+#ifdef TEST
   TestRunner tr;
   RUN_TEST(tr, TestSerpFormat);
   RUN_TEST(tr, TestTop5);
   RUN_TEST(tr, TestHitcount);
   RUN_TEST(tr, TestRanking);
   RUN_TEST(tr, TestBasicSearch);
-
-  size_t N = 100'000;
-  PERFORM(AllTests, N);
+#endif
+#ifdef PERF
+  PERFORM(PerformanceTester("small"), 1);
+  PERFORM(PerformanceTester("mid"), 1);
+  // PERFORM(AllTests, N);
+#endif
 }

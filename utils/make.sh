@@ -1,0 +1,1 @@
+g++ ./make_test.cpp -o ./make_test  -Wall -Wextra -g -O3 -lpthread -std=c++17
