@@ -78,16 +78,18 @@ void SearchServer::AddQueriesStream(istream &query_input,
   TotalDuration docid_fill("Filling in doc_id structure");
   TotalDuration sorting("Sorting search results");
   TotalDuration lookup("Looking up for a document");
-  // vector<size_t> docid_count(50'000);  // document_id -> hitcount
+  vector<size_t> docid_count(50'000);  // document_id -> hitcount
+
   for (string current_query;
        getline(query_input, current_query);) {  // # queries <= 500k
+
     vector<string> words;
     {
       ADD_DURATION(split);
       words = SplitIntoWords(current_query);
     }
 
-    Map<size_t, size_t> docid_count;
+    fill(docid_count.begin(), docid_count.end(), 0);
     for (const auto &word : words) {  // # of words <= 10 in query
       list<size_t> doc_ids;
       {
@@ -104,8 +106,12 @@ void SearchServer::AddQueriesStream(istream &query_input,
 
     // # of search_results <= 50k (btw my case as all the query are found in
     // documents)
-    vector<pair<size_t, size_t>> search_results(docid_count.begin(),
-                                                docid_count.end());
+    vector<pair<size_t, size_t>> search_results;
+    for (size_t i = 0; i < 50'000; i++) {
+      if (docid_count[i] > 0) {
+        search_results.push_back({i, docid_count[i]});
+      }
+    }
     {
       ADD_DURATION(sorting);
       partial_sort(
