@@ -180,12 +180,12 @@ void TestBasicSearch() {
 #define STR_HELPER(N) #N
 #define STR(N) STR_HELPER(N)
 
-#define PERFORM(fun, N)                                                        \
-  do {                                                                         \
-    LOG_DURATION(#fun " x " STR(N) " times");                                  \
-    for (size_t i = 0; i < N; i++) {                                           \
-      fun();                                                                   \
-    }                                                                          \
+#define PERFORM(fun, N)                       \
+  do {                                        \
+    LOG_DURATION(#fun " x " STR(N) " times"); \
+    for (size_t i = 0; i < N; i++) {          \
+      fun();                                  \
+    }                                         \
   } while (0)
 
 void AllTests() {
@@ -208,10 +208,16 @@ void PerformanceTest(string folder) {
     return;
   };
   SearchServer srv;
-  srv.UpdateDocumentBase(docs_input);
-  ostringstream queries_output;
-  srv.AddQueriesStream(queries_input, queries_output);
-  const string result = queries_output.str();
+  {
+    LOG_DURATION("Update doc base");
+    srv.UpdateDocumentBase(docs_input);
+  }
+  {
+    LOG_DURATION("Add queries stream");
+    ostringstream queries_output;
+    srv.AddQueriesStream(queries_input, queries_output);
+    const string result = queries_output.str();
+  }
   // cout << "[" << result << "]" << endl;
 }
 
