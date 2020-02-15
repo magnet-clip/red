@@ -31,7 +31,7 @@ void SearchServer::AddQueriesStream(istream &query_input,
 
     fill(docid_count.begin(), docid_count.end(), 0);
     for (const auto &word : words) {  // # of words <= 10 in query
-      list<size_t> doc_ids = move(index.Lookup(word));
+      DocIds doc_ids = move(index.Lookup(word));
       for (const size_t docid : doc_ids) {  // # documents <= 50k
         docid_count[docid]++;
       }
@@ -77,7 +77,7 @@ void InvertedIndex::Add(const string &document) {
   }
 }
 
-const list<size_t> &InvertedIndex::Lookup(const string &word) const {
+const DocIds &InvertedIndex::Lookup(const string &word) const {
   if (auto it = index.find(word); it != index.end()) {
     return it->second;
   } else {

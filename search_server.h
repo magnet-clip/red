@@ -10,7 +10,8 @@
 #include <vector>
 #include "utils.h"
 using namespace std;
-using DocIds = list<size_t>;
+
+using DocIds = vector<size_t>;
 class InvertedIndex {
  public:
   void Add(const string &document);
@@ -19,8 +20,8 @@ class InvertedIndex {
   const string &GetDocument(size_t id) const { return docs[id]; }
 
  private:
-  Map<string, list<size_t>> index;  // word -> [doc_id]
-  vector<string> docs;              // doc_id -> document
+  Map<string, DocIds> index;  // word -> [doc_id]
+  vector<string> docs;        // doc_id -> document
 
   DocIds none;
 };

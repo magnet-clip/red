@@ -225,8 +225,8 @@ function<void()> PerformanceTester(string folder) {
   return [folder]() { PerformanceTest(folder); };
 }
 
-//#define TEST
-//#define PERF
+#define TEST
+#define PERF
 #define N 100'000
 
 int main() {
@@ -241,6 +241,7 @@ int main() {
 #ifdef PERF
   PERFORM(PerformanceTester("small"), 1);
   PERFORM(PerformanceTester("mid"), 1);
+  PERFORM(PerformanceTester("coursera"), 1);
   // PERFORM(AllTests, N);
 #endif
 }

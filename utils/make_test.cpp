@@ -1,5 +1,5 @@
-#include <algorithm>
 #include <assert.h>
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <random>
@@ -11,7 +11,7 @@
 
 using namespace std;
 class CaseGenerator {
-public:
+ public:
   struct GenParams {
     // Максимальное число слов в документе
     size_t max_words_in_document;
@@ -36,7 +36,7 @@ public:
   explicit CaseGenerator(GenParams params);
   void Generate();
 
-private:
+ private:
   void GenerateInfo();
 
   string GetRandomWord();
@@ -54,7 +54,9 @@ private:
 };
 
 CaseGenerator::CaseGenerator(GenParams params)
-    : _params(params), _rd(SEED), _char('a', 'z'),
+    : _params(params),
+      _rd(SEED),
+      _char('a', 'z'),
       _word_length(1, params.max_word_length),
       _words_in_document(1, params.max_words_in_document),
       _words_in_query(1, params.max_words_in_query) {
@@ -177,22 +179,22 @@ void CaseGenerator::Generate() {
 
 int main() {
   // Максимальное число слов в документе
-  size_t max_words_in_document = 300; // <= 1'000
+  size_t max_words_in_document = 50;  // <= 1'000
 
   // Количество документов в базе. Документ = строка.
-  size_t documents_count = 5'000; // <= 50'000
+  size_t documents_count = 50'000;  // <= 50'000
 
   // Число различных слов в документах
-  size_t distinct_words_in_documents = 500; // <= 10'000
+  size_t distinct_words_in_documents = 500;  // <= 10'000
 
   // Число запросов
-  size_t number_of_queries = 30'000; // <= 500'000
+  size_t number_of_queries = 50'000;  // <= 500'000
 
   // Максимальное число слов в запросе
-  size_t max_words_in_query = 8; // <= 10
+  size_t max_words_in_query = 10;  // <= 10
 
   // Максимальная длина слова - как в запросе, так и в документе
-  size_t max_word_length = 50; // <= 100
+  size_t max_word_length = 50;  // <= 100
   CaseGenerator::GenParams params{
       max_words_in_document, documents_count,    distinct_words_in_documents,
       number_of_queries,     max_words_in_query, max_word_length};
