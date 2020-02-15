@@ -118,9 +118,7 @@ void SearchServer::AddQueriesStream(istream &query_input,
 }
 
 void InvertedIndex::Add(const string &document) {
-  docs.push_back(document);
-
-  const size_t docid = docs.size() - 1;
+  const size_t docid = NextDocumentId();
   for (const auto &word : SplitIntoWords(document)) {
     index[word].push_back(docid);
   }

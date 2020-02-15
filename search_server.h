@@ -14,16 +14,14 @@ using namespace std;
 using DocIds = vector<size_t>;
 class InvertedIndex {
  public:
-  InvertedIndex() { docs.reserve(50'000); }
   void Add(const string &document);
   const DocIds &Lookup(const string &word) const;
-  const string &GetDocument(size_t id) const { return docs[id]; }
-  size_t DocumentCount() const { return docs.size(); }
+  size_t DocumentCount() const { return _last_doc_id; }
+  size_t NextDocumentId() { return _last_doc_id++; }
 
  private:
+  size_t _last_doc_id = 0;
   Map<string, DocIds> index;  // word -> [doc_id]
-  vector<string> docs;        // doc_id -> document
-
   DocIds none;
 };
 
