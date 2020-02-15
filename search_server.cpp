@@ -5,11 +5,8 @@
 
 #include <algorithm>
 #include <iostream>
-#include <iterator>
-#include <sstream>
 #include <unordered_set>
 
-// #define PERF
 #ifndef PERF
 #define ADD_DURATION(dummy) \
   {}
@@ -20,13 +17,11 @@ SearchServer::SearchServer(istream &document_input) {
 }
 
 void SearchServer::UpdateDocumentBase(istream &document_input) {
-  InvertedIndex new_index;
-
+  index.StartInit();
   for (string current_document; getline(document_input, current_document);) {
-    new_index.Add(move(current_document));
+    index.Add(move(current_document));
   }
-
-  index = move(new_index);
+  index.FinishInit();
 }
 
 void SearchServer::AddQueriesStream(istream &query_input,
@@ -45,12 +40,13 @@ void SearchServer::AddQueriesStream(istream &query_input,
     int64_t rhs_docid = rhs.first;
     auto rhs_hit_count = rhs.second;
     return make_pair(lhs_hit_count, -lhs_docid) >
-           make_pair(rhs_hit_count, -rhs_docid);
+        make_pair(rhs_hit_count, -rhs_docid);
   };
   const auto total_doc_count = index.DocumentCount();
   vector<size_t> docid_count(total_doc_count);  // document_id -> hitcount
   vector<pair<size_t, size_t>> search_results(total_doc_count);
 
+  const size_t five = 5;
   for (string current_query;
        getline(query_input, current_query);) {  // # queries <= 500k
 
@@ -65,12 +61,12 @@ void SearchServer::AddQueriesStream(istream &query_input,
       DocIds doc_ids;
       {
         ADD_DURATION(lookup);
-        doc_ids = move(index.Lookup(word));
+        doc_ids = index.Lookup(word);
       }
       {
         ADD_DURATION(docid_fill);
-        for (const size_t docid : doc_ids) {  // # documents <= 50k
-          docid_count[docid]++;
+        for (const auto& [docid, cnt] : doc_ids) {  // # documents <= 50k
+          docid_count[docid] += cnt;
         }
       }
     }
@@ -80,7 +76,6 @@ void SearchServer::AddQueriesStream(istream &query_input,
     size_t actual_count = 0;
     {
       ADD_DURATION(sorting_1);
-      fill(search_results.begin(), search_results.end(), make_pair(0, 0));
       for (size_t i = 0; i < total_doc_count; i++) {
         if (docid_count[i] > 0) {
           search_results[actual_count++] = {i, docid_count[i]};
@@ -89,18 +84,18 @@ void SearchServer::AddQueriesStream(istream &query_input,
     }
     {
       ADD_DURATION(sorting_2);
-      if (actual_count < 5) {
+      if (actual_count < five) {
         sort(begin(search_results), next(begin(search_results), actual_count),
              comparer);
       } else {
-        partial_sort(begin(search_results), next(begin(search_results), 5),
+        partial_sort(begin(search_results), next(begin(search_results), five),
                      next(begin(search_results), actual_count), comparer);
       }
     }
 
     search_results_output << current_query << ':';
-    for (auto [docid, hitcount] :
-         Head(search_results, min(actual_count, (size_t)5))) {
+    for (auto[docid, hitcount] :
+        Head(search_results, min(actual_count, five))) {
       search_results_output << " {"
                             << "docid: " << docid << ", "
                             << "hitcount: " << hitcount << '}';
@@ -112,7 +107,7 @@ void SearchServer::AddQueriesStream(istream &query_input,
 void InvertedIndex::Add(const string &document) {
   const size_t docid = NextDocumentId();
   for (const auto &word : SplitIntoWords(document)) {
-    index[word].push_back(docid);
+    temp_index[word][docid]++;
   }
 }
 
