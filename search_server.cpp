@@ -31,8 +31,7 @@ void SearchServer::AddQueriesStream(istream &query_input,
 
     fill(docid_count.begin(), docid_count.end(), 0);
     for (const auto &word : words) {  // # of words <= 10 in query
-      DocIds doc_ids = move(index.Lookup(word));
-      for (const size_t docid : doc_ids) {  // # documents <= 50k
+      for (const size_t docid : index.Lookup(word)) {  // # documents <= 50k
         docid_count[docid]++;
       }
     }
@@ -69,9 +68,7 @@ void SearchServer::AddQueriesStream(istream &query_input,
 }
 
 void InvertedIndex::Add(const string &document) {
-  docs.push_back(document);
-
-  const size_t docid = docs.size() - 1;
+  const size_t docid = GetDocId();
   for (const auto &word : SplitIntoWords(document)) {
     index[word].push_back(docid);
   }

@@ -16,13 +16,11 @@ class InvertedIndex {
  public:
   void Add(const string &document);
   const DocIds &Lookup(const string &word) const;
-
-  const string &GetDocument(size_t id) const { return docs[id]; }
+  size_t GetDocId() { return last_doc_id++; }
 
  private:
   Map<string, DocIds> index;  // word -> [doc_id]
-  vector<string> docs;        // doc_id -> document
-
+  size_t last_doc_id = 0;
   DocIds none;
 };
 
