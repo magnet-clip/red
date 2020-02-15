@@ -2,6 +2,7 @@
 #include "profile.h"
 #include "search_server.h"
 #include "test_runner.h"
+#include "utils.h"
 
 #include <algorithm>
 #include <fstream>
@@ -225,24 +226,18 @@ function<void()> PerformanceTester(string folder) {
   return [folder]() { PerformanceTest(folder); };
 }
 
-#define TEST
-#define PERF
-#define N 100'000
-
 int main() {
-#ifdef TEST
   TestRunner tr;
   RUN_TEST(tr, TestSerpFormat);
   RUN_TEST(tr, TestTop5);
   RUN_TEST(tr, TestHitcount);
   RUN_TEST(tr, TestRanking);
   RUN_TEST(tr, TestBasicSearch);
-#endif
-#ifdef PERF
+
   // PERFORM(PerformanceTester("small"), 1);
   // PERFORM(PerformanceTester("mid"), 1);
   PERFORM(PerformanceTester("coursera"), 1);
   PERFORM(PerformanceTester("coursera-2"), 1);
+  PERFORM(PerformanceTester("coursera-3"), 1);
   // PERFORM(AllTests, N);
-#endif
 }

@@ -14,6 +14,7 @@ using namespace std;
 using DocIds = vector<size_t>;
 class InvertedIndex {
  public:
+  InvertedIndex() { docs.reserve(50'000); }
   void Add(const string &document);
   const DocIds &Lookup(const string &word) const;
   const string &GetDocument(size_t id) const { return docs[id]; }
