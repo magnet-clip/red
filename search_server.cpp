@@ -5,23 +5,31 @@
 
 #include <algorithm>
 #include <iostream>
+#include <iterator>
+#include <sstream>
 #include <unordered_set>
 
 #ifndef PERF
 #define ADD_DURATION(dummy) \
   {}
 #endif
+#define FIVE ((size_t)5)
 
 SearchServer::SearchServer(istream &document_input) {
   UpdateDocumentBase(document_input);
 }
 
 void SearchServer::UpdateDocumentBase(istream &document_input) {
-  index.StartInit();
+  InvertedIndex1 new_index;
+  vector<string> buffer(1000);
+
   for (string current_document; getline(document_input, current_document);) {
-    index.Add(move(current_document));
+    new_index.Add(move(current_document), buffer);
   }
-  index.FinishInit();
+
+  new_index.FinishUpdate();
+
+   index = move(new_index);
 }
 
 void SearchServer::AddQueriesStream(istream &query_input,
@@ -33,7 +41,6 @@ void SearchServer::AddQueriesStream(istream &query_input,
   TotalDuration sorting_2("Sorting 2");
   TotalDuration lookup("Looking up for a document");
 #endif
-
   const auto comparer = [](pair<size_t, size_t> lhs, pair<size_t, size_t> rhs) {
     int64_t lhs_docid = lhs.first;
     auto lhs_hit_count = lhs.second;
@@ -42,18 +49,19 @@ void SearchServer::AddQueriesStream(istream &query_input,
     return make_pair(lhs_hit_count, -lhs_docid) >
         make_pair(rhs_hit_count, -rhs_docid);
   };
-  const auto total_doc_count = index.DocumentCount();
-  vector<size_t> docid_count(total_doc_count);  // document_id -> hitcount
-  vector<pair<size_t, size_t>> search_results(total_doc_count);
 
-  const size_t five = 5;
+  size_t total_count = index.DocumentCount();
+  vector<size_t> docid_count(total_count);  // document_id -> hitcount
+  vector<pair<size_t, size_t>> search_results(total_count);
+
   for (string current_query;
        getline(query_input, current_query);) {  // # queries <= 500k
 
     vector<string> words;
     {
       ADD_DURATION(split);
-      words = SplitIntoWords(current_query);
+      vector<string> buffer(10);
+      words = SplitIntoWords(current_query, buffer);
     }
 
     fill(docid_count.begin(), docid_count.end(), 0);
@@ -65,8 +73,8 @@ void SearchServer::AddQueriesStream(istream &query_input,
       }
       {
         ADD_DURATION(docid_fill);
-        for (const auto& [docid, cnt] : doc_ids) {  // # documents <= 50k
-          docid_count[docid] += cnt;
+        for (const auto &[doc_id, doc_count] : doc_ids) {  // # documents <= 50k
+          docid_count[doc_id] += doc_count;
         }
       }
     }
@@ -76,7 +84,7 @@ void SearchServer::AddQueriesStream(istream &query_input,
     size_t actual_count = 0;
     {
       ADD_DURATION(sorting_1);
-      for (size_t i = 0; i < total_doc_count; i++) {
+      for (size_t i = 0; i < total_count; i++) {
         if (docid_count[i] > 0) {
           search_results[actual_count++] = {i, docid_count[i]};
         }
@@ -84,18 +92,18 @@ void SearchServer::AddQueriesStream(istream &query_input,
     }
     {
       ADD_DURATION(sorting_2);
-      if (actual_count < five) {
-        sort(begin(search_results), next(begin(search_results), actual_count),
-             comparer);
+      const auto actual_end = next(begin(search_results), actual_count);
+      if (actual_count < FIVE) {
+        sort(begin(search_results), actual_end, comparer);
       } else {
-        partial_sort(begin(search_results), next(begin(search_results), five),
-                     next(begin(search_results), actual_count), comparer);
+        partial_sort(begin(search_results), next(begin(search_results), FIVE),
+                     actual_end, comparer);
       }
     }
 
     search_results_output << current_query << ':';
     for (auto[docid, hitcount] :
-        Head(search_results, min(actual_count, five))) {
+        Head(search_results, min(actual_count, FIVE))) {
       search_results_output << " {"
                             << "docid: " << docid << ", "
                             << "hitcount: " << hitcount << '}';
@@ -104,14 +112,22 @@ void SearchServer::AddQueriesStream(istream &query_input,
   }
 }
 
-void InvertedIndex::Add(const string &document) {
-  const size_t docid = NextDocumentId();
-  for (const auto &word : SplitIntoWords(document)) {
+void InvertedIndex1::Add(const string &document, vector<string> &buffer) {
+  docs.push_back(document);
+  const size_t docid = docs.size() - 1;
+  for (const auto &word : SplitIntoWords(docs.back(), buffer)) {
     temp_index[word][docid]++;
   }
 }
 
-const DocIds &InvertedIndex::Lookup(const string &word) const {
+void InvertedIndex1::FinishUpdate() {
+  for (const auto &[word, id_count_pair] : temp_index) {
+    index[word] = {make_move_iterator(id_count_pair.begin()),
+                   make_move_iterator(id_count_pair.end())};
+  }
+}
+
+const DocIds &InvertedIndex1::Lookup(const string &word) const {
   if (auto it = index.find(word); it != index.end()) {
     return it->second;
   } else {

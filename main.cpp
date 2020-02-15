@@ -48,8 +48,8 @@ void TestSerpFormat() {
 }
 
 void TestTop5() {
-  const vector<string> docs = {"milk a",  "milk b",        "milk c", "milk d",
-                               "milk e",  "milk f",        "milk g", "water a",
+  const vector<string> docs = {"milk a", "milk b", "milk c", "milk d",
+                               "milk e", "milk f", "milk g", "water a",
                                "water b", "fire and earth"};
 
   const vector<string> queries = {"milk", "water", "rock"};
@@ -131,13 +131,13 @@ void TestRanking() {
   const vector<string> queries = {"moscow is the capital of russia"};
   const vector<string> expected = {
       Join(' ', vector{
-                    "moscow is the capital of russia:",
-                    "{docid: 7, hitcount: 6}",
-                    "{docid: 14, hitcount: 6}",
-                    "{docid: 0, hitcount: 4}",
-                    "{docid: 1, hitcount: 4}",
-                    "{docid: 2, hitcount: 4}",
-                })};
+          "moscow is the capital of russia:",
+          "{docid: 7, hitcount: 6}",
+          "{docid: 14, hitcount: 6}",
+          "{docid: 0, hitcount: 4}",
+          "{docid: 1, hitcount: 4}",
+          "{docid: 2, hitcount: 4}",
+      })};
   TestFunctionality(docs, queries, expected);
 }
 
@@ -157,8 +157,8 @@ void TestBasicSearch() {
       "we dont need no education"};
 
   const vector<string> queries = {"we need some help", "it",
-                                  "i love this game",  "tell me why",
-                                  "dislike",           "about"};
+                                  "i love this game", "tell me why",
+                                  "dislike", "about"};
 
   const vector<string> expected = {
       Join(' ', vector{"we need some help:", "{docid: 9, hitcount: 2}",
@@ -219,7 +219,6 @@ void PerformanceTest(string folder) {
     srv.AddQueriesStream(queries_input, queries_output);
     const string result = queries_output.str();
   }
-  // cout << "[" << result << "]" << endl;
 }
 
 function<void()> PerformanceTester(string folder) {
@@ -234,10 +233,8 @@ int main() {
   RUN_TEST(tr, TestRanking);
   RUN_TEST(tr, TestBasicSearch);
 
-  // PERFORM(PerformanceTester("small"), 1);
-  // PERFORM(PerformanceTester("mid"), 1);
   PERFORM(PerformanceTester("coursera"), 1);
   PERFORM(PerformanceTester("coursera-2"), 1);
+  PERFORM(PerformanceTester("coursera-2-1"), 1);
   PERFORM(PerformanceTester("coursera-3"), 1);
-  // PERFORM(AllTests, N);
 }
