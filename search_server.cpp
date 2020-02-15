@@ -78,6 +78,7 @@ void SearchServer::AddQueriesStream(istream &query_input,
   TotalDuration docid_fill("Filling in doc_id structure");
   TotalDuration sorting("Sorting search results");
   TotalDuration lookup("Looking up for a document");
+  // vector<size_t> docid_count(50'000);  // document_id -> hitcount
   for (string current_query;
        getline(query_input, current_query);) {  // # queries <= 500k
     vector<string> words;
@@ -107,15 +108,18 @@ void SearchServer::AddQueriesStream(istream &query_input,
                                                 docid_count.end());
     {
       ADD_DURATION(sorting);
-      sort(begin(search_results), end(search_results),
-           [](pair<size_t, size_t> lhs, pair<size_t, size_t> rhs) {
-             int64_t lhs_docid = lhs.first;
-             auto lhs_hit_count = lhs.second;
-             int64_t rhs_docid = rhs.first;
-             auto rhs_hit_count = rhs.second;
-             return make_pair(lhs_hit_count, -lhs_docid) >
-                    make_pair(rhs_hit_count, -rhs_docid);
-           });
+      partial_sort(
+          begin(search_results),
+          next(begin(search_results), min(search_results.size(), (size_t)5)),
+          end(search_results),
+          [](pair<size_t, size_t> lhs, pair<size_t, size_t> rhs) {
+            int64_t lhs_docid = lhs.first;
+            auto lhs_hit_count = lhs.second;
+            int64_t rhs_docid = rhs.first;
+            auto rhs_hit_count = rhs.second;
+            return make_pair(lhs_hit_count, -lhs_docid) >
+                   make_pair(rhs_hit_count, -rhs_docid);
+          });
     }
 
     search_results_output << current_query << ':';
