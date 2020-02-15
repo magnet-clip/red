@@ -6,4 +6,4 @@
 template <class K, class V>
 using Map = std::unordered_map<K, V>;
 
-std::vector<std::string> SplitIntoWords(const std::string &line);
+std::vector<std::string> SplitIntoWords(std::string_view str);

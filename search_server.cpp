@@ -31,19 +31,22 @@ void SearchServer::AddQueriesStream(istream &query_input,
 
     fill(docid_count.begin(), docid_count.end(), 0);
     for (const auto &word : words) {  // # of words <= 10 in query
-      for (const size_t docid : index.Lookup(word)) {  // # documents <= 50k
+      DocIds doc_ids = move(index.Lookup(word));
+      for (const size_t docid : doc_ids) {  // # documents <= 50k
         docid_count[docid]++;
       }
     }
 
     // # of search_results <= 50k (btw my case as all the query are found in
     // documents)
-    vector<pair<size_t, size_t>> search_results;
+    vector<pair<size_t, size_t>> search_results(50'000);
+    size_t actual_count = 0;
     for (size_t i = 0; i < 50'000; i++) {
       if (docid_count[i] > 0) {
-        search_results.push_back({i, docid_count[i]});
+        search_results[actual_count++] = {i, docid_count[i]};
       }
     }
+    search_results.resize(actual_count);
     partial_sort(
         begin(search_results),
         next(begin(search_results), min(search_results.size(), (size_t)5)),
@@ -68,7 +71,9 @@ void SearchServer::AddQueriesStream(istream &query_input,
 }
 
 void InvertedIndex::Add(const string &document) {
-  const size_t docid = GetDocId();
+  docs.push_back(document);
+
+  const size_t docid = docs.size() - 1;
   for (const auto &word : SplitIntoWords(document)) {
     index[word].push_back(docid);
   }
