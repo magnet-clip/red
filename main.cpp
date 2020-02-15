@@ -239,9 +239,10 @@ int main() {
   RUN_TEST(tr, TestBasicSearch);
 #endif
 #ifdef PERF
-  PERFORM(PerformanceTester("small"), 1);
-  PERFORM(PerformanceTester("mid"), 1);
+  // PERFORM(PerformanceTester("small"), 1);
+  // PERFORM(PerformanceTester("mid"), 1);
   PERFORM(PerformanceTester("coursera"), 1);
+  PERFORM(PerformanceTester("coursera-2"), 1);
   // PERFORM(AllTests, N);
 #endif
 }

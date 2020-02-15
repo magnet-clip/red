@@ -182,13 +182,13 @@ int main() {
   size_t max_words_in_document = 50;  // <= 1'000
 
   // Количество документов в базе. Документ = строка.
-  size_t documents_count = 50'000;  // <= 50'000
+  size_t documents_count = 800;  // <= 50'000
 
   // Число различных слов в документах
-  size_t distinct_words_in_documents = 500;  // <= 10'000
+  size_t distinct_words_in_documents = 1000;  // <= 10'000
 
   // Число запросов
-  size_t number_of_queries = 50'000;  // <= 500'000
+  size_t number_of_queries = 300'000;  // <= 500'000
 
   // Максимальное число слов в запросе
   size_t max_words_in_query = 10;  // <= 10

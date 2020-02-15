@@ -16,8 +16,8 @@ class InvertedIndex {
  public:
   void Add(const string &document);
   const DocIds &Lookup(const string &word) const;
-
   const string &GetDocument(size_t id) const { return docs[id]; }
+  size_t DocumentCount() const { return docs.size(); }
 
  private:
   Map<string, DocIds> index;  // word -> [doc_id]
