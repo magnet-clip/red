@@ -123,12 +123,12 @@ string CaseGenerator::GetStringOfWords(const vector<string> &words,
 }
 
 string CaseGenerator::GetDocument(vector<string> &words) {
-  int words_count = _words_in_document(_rd);
+  int words_count = _params.max_words_in_document;  //  _words_in_document(_rd);
   return GetStringOfWords(words, words_count);
 }
 
 string CaseGenerator::GetQuery(vector<string> &words) {
-  int words_count = _words_in_query(_rd);
+  int words_count = _params.max_words_in_query;  // _words_in_query(_rd);
   return GetStringOfWords(words, words_count);
 }
 
@@ -188,7 +188,7 @@ int main() {
   size_t distinct_words_in_documents = 1000;  // <= 10'000
 
   // Число запросов
-  size_t number_of_queries = 300'000;  // <= 500'000
+  size_t number_of_queries = 500'000;  // <= 500'000
 
   // Максимальное число слов в запросе
   size_t max_words_in_query = 10;  // <= 10
