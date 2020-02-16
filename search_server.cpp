@@ -44,14 +44,14 @@ void SearchServer::AddQueriesStream(istream &query_input,
   // # queries <= 500k
   for (string current_query; getline(query_input, current_query);) {
     fill(docid_count.begin(), docid_count.end(), 0);
-    {
-      shared_lock lock(index_mutex);
-      // # of words <= 10 in query
-      for (const auto &word : SplitIntoWords(current_query, buffer)) {
-        // # documents <= 50k
-        for (const auto &[doc_id, doc_count] : index.Lookup(word)) {
-          docid_count[doc_id] += doc_count;
-        }
+    shared_lock lock(index_mutex);
+    // # of words <= 10 in query
+    for (const auto &word : SplitIntoWords(current_query, buffer)) {
+      // # documents <= 50k
+      auto counts = index.Lookup(word);
+      if (!counts.has_value()) continue;
+      for (const auto &[doc_id, doc_count] : counts.value()) {
+        docid_count[doc_id] += doc_count;
       }
     }
 
