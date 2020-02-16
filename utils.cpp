@@ -1,9 +1,5 @@
 #include "utils.h"
 
-#include <iostream>
-#include <iterator>
-#include <sstream>
-
 using namespace std;
 
 vector<string> SplitIntoWords(string_view line, vector<string> &words) {

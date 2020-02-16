@@ -1,5 +1,6 @@
 #pragma once
 
+#include <future>
 #include <istream>
 #include <list>
 #include <map>
@@ -8,27 +9,44 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <shared_mutex>
 #include "utils.h"
 using namespace std;
 
 using DocIds = vector<pair<size_t, size_t>>;
-class InvertedIndex1 {
+class InvertedIndex {
  public:
-  InvertedIndex1() { docs.reserve(50'000); }
-  void Add(const string &document, vector<string>& buffer);
-  const DocIds &Lookup(const string &word) const;
-  const string &GetDocument(size_t id) const { return docs[id]; }
-  size_t DocumentCount() const { return docs.size(); }
+  InvertedIndex() { this->docs.reserve(50'000); }
 
-  void FinishUpdate();
+  explicit InvertedIndex(istream &documents) : InvertedIndex() {
+    vector<string> buffer(1000);
+    Map<string, Map<size_t, size_t>> temp_index;
+    for (string document; getline(documents, document);) {
+      this->docs.push_back(document);
+      const size_t docid = this->docs.size() - 1;
+      for (const auto &word : SplitIntoWords(this->docs.back(), buffer)) {
+        temp_index[word][docid]++;
+      }
+    }
+    for (const auto &[word, id_count_pair] : temp_index) {
+      this->index[word] = {id_count_pair.begin(),
+                           id_count_pair.end()};
+    }
+  }
+
+  const DocIds &Lookup(const string &word) const {
+    if (auto it = this->index.find(word); it != this->index.end()) {
+      return it->second;
+    } else {
+      return none;
+    }
+  }
+  size_t DocumentCount() const { return this->docs.size(); }
+  const string &GetDocument(size_t id) const { return this->docs[id]; }
 
  private:
-  Map<string, DocIds> index;  // word -> [doc_id]
-  vector<string> docs;        // doc_id -> document
-
-  // word -> [doc_id, how many times this word shows up in this document]
-  Map<string, Map<size_t, size_t>> temp_index;
-
+  Map<string, DocIds> index;
+  vector<string> docs;
   DocIds none;
 };
 
@@ -40,5 +58,7 @@ class SearchServer {
   void AddQueriesStream(istream &query_input, ostream &search_results_output);
 
  private:
-  InvertedIndex1 index;
+  vector<future<void>> futures;
+  shared_mutex index_mutex;
+  InvertedIndex index;
 };
