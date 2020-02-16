@@ -14,6 +14,7 @@
 using namespace std;
 
 using DocIds = vector<pair<size_t, size_t>>;
+
 class InvertedIndex {
  public:
   InvertedIndex() { this->docs.reserve(50'000); }
@@ -34,11 +35,11 @@ class InvertedIndex {
     }
   }
 
-  const DocIds &Lookup(const string &word) const {
+  optional<DocIds> Lookup(const string &word) const {
     if (auto it = this->index.find(word); it != this->index.end()) {
       return it->second;
     } else {
-      return none;
+      return {};
     }
   }
   size_t DocumentCount() const { return this->docs.size(); }
@@ -47,7 +48,6 @@ class InvertedIndex {
  private:
   Map<string, DocIds> index;
   vector<string> docs;
-  DocIds none;
 };
 
 class SearchServer {
