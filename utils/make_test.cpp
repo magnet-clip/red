@@ -60,18 +60,19 @@ CaseGenerator::CaseGenerator(GenParams params)
       _word_length(1, params.max_word_length),
       _words_in_document(1, params.max_words_in_document),
       _words_in_query(1, params.max_words_in_query) {
-  assert(_params.max_word_length > 0);
-  assert(_params.documents_count > 0);
-  assert(_params.max_words_in_document > 0);
-  assert(_params.distinct_words_in_documents > 0);
-  assert(_params.number_of_queries > 0);
-  assert(_params.max_words_in_query > 0);
-  assert(_params.max_word_length <= 100);
-  assert(_params.documents_count <= 50'000);
-  assert(_params.max_words_in_document <= 1'000);
-  assert(_params.distinct_words_in_documents <= 10'000);
-  assert(_params.number_of_queries <= 500'000);
-  assert(_params.max_words_in_query <= 10);
+  assert(_params.max_word_length > 0 && _params.max_word_length <= 100);
+
+  assert(_params.documents_count > 0 && _params.documents_count <= 50'000);
+
+  assert(_params.max_words_in_document > 0 &&
+         _params.max_words_in_document <= 1'000);
+
+  assert(_params.distinct_words_in_documents > 0 &&
+         _params.distinct_words_in_documents <= 10'000);
+
+  assert(_params.number_of_queries > 0 && _params.number_of_queries <= 500'000);
+
+  assert(_params.max_words_in_query > 0 && _params.max_words_in_query <= 10);
 }
 
 void CaseGenerator::GenerateInfo() {
@@ -123,12 +124,12 @@ string CaseGenerator::GetStringOfWords(const vector<string> &words,
 }
 
 string CaseGenerator::GetDocument(vector<string> &words) {
-  int words_count = _params.max_words_in_document;  //  _words_in_document(_rd);
+  int words_count = _words_in_document(_rd);
   return GetStringOfWords(words, words_count);
 }
 
 string CaseGenerator::GetQuery(vector<string> &words) {
-  int words_count = _params.max_words_in_query;  // _words_in_query(_rd);
+  int words_count = _words_in_query(_rd);
   return GetStringOfWords(words, words_count);
 }
 
@@ -179,22 +180,22 @@ void CaseGenerator::Generate() {
 
 int main() {
   // Максимальное число слов в документе
-  size_t max_words_in_document = 50;  // <= 1'000
+  size_t max_words_in_document = 100;  // <= 1'000
 
   // Количество документов в базе. Документ = строка.
-  size_t documents_count = 800;  // <= 50'000
+  size_t documents_count = 3'233;  // <= 50'000
 
   // Число различных слов в документах
-  size_t distinct_words_in_documents = 1000;  // <= 10'000
+  size_t distinct_words_in_documents = 200;  // <= 10'000
 
   // Число запросов
-  size_t number_of_queries = 500'000;  // <= 500'000
+  size_t number_of_queries = 50'000;  // <= 500'000
 
   // Максимальное число слов в запросе
   size_t max_words_in_query = 10;  // <= 10
 
   // Максимальная длина слова - как в запросе, так и в документе
-  size_t max_word_length = 50;  // <= 100
+  size_t max_word_length = 71;  // <= 100
   CaseGenerator::GenParams params{
       max_words_in_document, documents_count,    distinct_words_in_documents,
       number_of_queries,     max_words_in_query, max_word_length};

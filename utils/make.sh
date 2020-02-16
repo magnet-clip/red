@@ -1,1 +1,2 @@
-g++ ./make_test.cpp -o ./make_test  -Wall -Wextra -g -O3 -lpthread -std=c++17
+g++ ./make_test.cpp -o ./generate -Wall -Wextra -g -O0 -lpthread -std=c++17
+#  -v -Q -da

@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <fstream>
 #include <functional>
+#include <iostream>
 #include <iterator>
 #include <map>
 #include <random>
@@ -48,8 +49,8 @@ void TestSerpFormat() {
 }
 
 void TestTop5() {
-  const vector<string> docs = {"milk a", "milk b", "milk c", "milk d",
-                               "milk e", "milk f", "milk g", "water a",
+  const vector<string> docs = {"milk a",  "milk b",        "milk c", "milk d",
+                               "milk e",  "milk f",        "milk g", "water a",
                                "water b", "fire and earth"};
 
   const vector<string> queries = {"milk", "water", "rock"};
@@ -131,13 +132,13 @@ void TestRanking() {
   const vector<string> queries = {"moscow is the capital of russia"};
   const vector<string> expected = {
       Join(' ', vector{
-          "moscow is the capital of russia:",
-          "{docid: 7, hitcount: 6}",
-          "{docid: 14, hitcount: 6}",
-          "{docid: 0, hitcount: 4}",
-          "{docid: 1, hitcount: 4}",
-          "{docid: 2, hitcount: 4}",
-      })};
+                    "moscow is the capital of russia:",
+                    "{docid: 7, hitcount: 6}",
+                    "{docid: 14, hitcount: 6}",
+                    "{docid: 0, hitcount: 4}",
+                    "{docid: 1, hitcount: 4}",
+                    "{docid: 2, hitcount: 4}",
+                })};
   TestFunctionality(docs, queries, expected);
 }
 
@@ -157,8 +158,8 @@ void TestBasicSearch() {
       "we dont need no education"};
 
   const vector<string> queries = {"we need some help", "it",
-                                  "i love this game", "tell me why",
-                                  "dislike", "about"};
+                                  "i love this game",  "tell me why",
+                                  "dislike",           "about"};
 
   const vector<string> expected = {
       Join(' ', vector{"we need some help:", "{docid: 9, hitcount: 2}",
@@ -225,6 +226,100 @@ function<void()> PerformanceTester(string folder) {
   return [folder]() { PerformanceTest(folder); };
 }
 
+#define SEED 34
+default_random_engine _rd(SEED);
+uniform_int_distribution<int> value(10, 1000);
+milliseconds random_time() { return milliseconds(value(_rd)); }
+
+void TestSearchServer(vector<pair<ifstream, ostream *>> &streams) {
+  // IteratorRange — шаблон из задачи Paginator
+  // random_time() — функция, которая возвращает случайный
+  // промежуток времени
+
+  LOG_DURATION("Total");
+  SearchServer srv(streams.front().first);
+  int num = 0;
+  int total = streams.size();
+  for (auto &[input, output] :
+       IteratorRange(begin(streams) + 1, end(streams))) {
+    auto time = random_time();
+    cout << "Iteration " << (num++) << "/" << total << endl;
+    cout << "Sleeping for " << time.count() << "ms" << endl;
+    this_thread::sleep_for(time);
+
+    if (!output) {
+      cout << "Updating..." << endl;
+      srv.UpdateDocumentBase(input);
+    } else {
+      cout << "Searching..." << endl;
+      srv.AddQueriesStream(input, *output);
+    }
+  }
+}
+
+class NullBuffer : public streambuf {
+ public:
+  int overflow(int c) { return c; }
+};
+
+// template <typename _Container>
+// class flattening_iterator
+//     : public iterator<output_iterator_tag, void, void, void, void> {
+//  protected:
+//   _Container *container;
+
+//  public:
+//   typedef _Container container_type;
+
+//   explicit flattening_iterator(_Container &__x)
+//       : container(std::__addressof(__x)) {}
+
+//   flattening_iterator &operator=(
+//       const typename _Container::value_type &__value) {
+//     container->push_back(__value);
+//     return *this;
+//   }
+
+//   flattening_iterator &operator=(typename _Container::value_type &&__value) {
+//     container->push_back(std::move(__value));
+//     return *this;
+//   }
+
+//   flattening_iterator &operator*() { return *this; }
+//   flattening_iterator &operator++() { return *this; }
+//   flattening_iterator operator++(int) { return *this; }
+// };
+
+// template <typename _Container>
+// inline flattening_iterator<_Container> flattening_inserter(_Container &__x) {
+//   return flattening_iterator<_Container>(__x);
+// }
+
+void DoTestSearchServer() {
+  LOG_DURATION("Grand Total");
+  // 1) Create an array of input and output streams
+  vector<string> folders = {"1-test",     "2-test",   "3-test",
+                            "4-test",     "coursera", "coursera-2",
+                            "coursera-3", "mid",      "small"};
+  NullBuffer null_buffer;
+  ostream null_stream(&null_buffer);
+  null_stream << "hello";
+  vector<pair<ifstream, ostream *>> streams;
+
+  for (const auto &folder : folders) {
+    streams.push_back(make_pair<ifstream, ostream *>(
+        ifstream("../test/" + folder + "/documents.txt"), nullptr));
+    streams.push_back(make_pair<ifstream, ostream *>(
+        ifstream("../test/" + folder + "/queries.txt"), &null_stream));
+  }
+
+  // 2) Feed those to server
+  TestSearchServer(streams);
+  // 3) ???
+
+  // 4) PROFIT!!1
+}
+
 int main() {
   TestRunner tr;
   RUN_TEST(tr, TestSerpFormat);
@@ -233,8 +328,10 @@ int main() {
   RUN_TEST(tr, TestRanking);
   RUN_TEST(tr, TestBasicSearch);
 
-  PERFORM(PerformanceTester("coursera"), 1);
-  PERFORM(PerformanceTester("coursera-2"), 1);
-  PERFORM(PerformanceTester("coursera-2-1"), 1);
-  PERFORM(PerformanceTester("coursera-3"), 1);
+  DoTestSearchServer();
+
+  // PERFORM(PerformanceTester("coursera"), 1);
+  // PERFORM(PerformanceTester("coursera-2"), 1);
+  // PERFORM(PerformanceTester("coursera-2-1"), 1);
+  // PERFORM(PerformanceTester("coursera-3"), 1);
 }
