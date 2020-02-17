@@ -59,7 +59,6 @@ string SearchServer::AddQueriesStreamSync(const vector<string> &queries) {
   vector<pair<size_t, size_t>> search_results(total_count);
 
   for (auto query : queries) {
-    // cerr << this_thread::get_id() << ": query = " << query << endl;
     fill(docid_count.begin(), docid_count.end(), 0);
 
     shared_lock lock(index_mutex);
@@ -113,25 +112,25 @@ void SearchServer::AddQueriesStream(istream &query_input,
   }
   queries.resize(count);
 
-  // return AddQueriesStreamSync(queries, search_results_output);
-
-  const size_t page_count = 8;
+  const size_t page_count =
+      thread::hardware_concurrency() != 0 ? thread::hardware_concurrency() : 8;
 
   for (size_t i = 0; i < page_count; i++) {
-    query_futures.push_back(async([this, queries, i, &search_results_output]() {
-      const size_t page_step = queries.size() / page_count;
-      auto start = queries.begin();
-      if (i > 0) {
-        start += i * page_step;
-      }
-      vector<string>::const_iterator end;
-      if (i == page_count - 1) {
-        end = queries.end();
-      } else {
-        end = start + page_step;
-      }
-      return SearchServer::AddQueriesStreamSync({start, end});
-    }));
+    query_futures.push_back(
+        async([this, queries, page_count, i, &search_results_output]() {
+          const size_t page_step = queries.size() / page_count;
+          auto start = queries.begin();
+          if (i > 0) {
+            start += i * page_step;
+          }
+          vector<string>::const_iterator end;
+          if (i == page_count - 1) {
+            end = queries.end();
+          } else {
+            end = start + page_step;
+          }
+          return SearchServer::AddQueriesStreamSync({start, end});
+        }));
   }
   for (auto &query_thread : query_futures) {
     search_results_output << query_thread.get();
