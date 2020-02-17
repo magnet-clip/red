@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <shared_mutex>
 #include <sstream>
 #include <unordered_set>
 
@@ -21,26 +22,14 @@ const auto comparer = [](pair<size_t, size_t> lhs, pair<size_t, size_t> rhs) {
 };
 
 SearchServer::SearchServer(istream &documents_input) {
-  vector<string> documents(50'000);
-  size_t count = 0;
-  for (string document; getline(documents_input, document);) {
-    documents[count++] = document;
-  }
-  documents.resize(count);
-  index = InvertedIndex(documents);
+  index = InvertedIndex(GetLines(documents_input));
 }
 
 void SearchServer::UpdateDocumentBase(istream &documents_input) {
-  vector<string> documents(50'000);
-  size_t count = 0;
-  for (string document; getline(documents_input, document);) {
-    documents[count++] = document;
-  }
-  documents.resize(count);
-
-  // update_futures.push_back(async([documents, this]() {
-  auto new_index = InvertedIndex(documents);
+  // update_futures.push_back(async([&documents_input, this]() {
+  auto new_index = InvertedIndex(GetLines(documents_input));
   unique_lock lock(index_mutex);
+  // swap(index, new_index);
   index = move(new_index);
   // }));
 }
@@ -119,10 +108,7 @@ void SearchServer::AddQueriesStream(istream &query_input,
     query_futures.push_back(
         async([this, queries, page_count, i, &search_results_output]() {
           const size_t page_step = queries.size() / page_count;
-          auto start = queries.begin();
-          if (i > 0) {
-            start += i * page_step;
-          }
+          auto start = queries.begin() + i * page_step;
           vector<string>::const_iterator end;
           if (i == page_count - 1) {
             end = queries.end();

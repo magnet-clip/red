@@ -20,3 +20,13 @@ vector<string> SplitIntoWords(string_view line, vector<string> &words) {
   return {make_move_iterator(words.begin()),
           make_move_iterator(next(words.begin(), count))};
 }
+
+vector<string> GetLines(istream &stream) {
+  vector<string> lines(50'000);
+  size_t count = 0;
+  for (string line; getline(stream, line);) {
+    lines[count++] = line;
+  }
+  lines.resize(count);
+  return lines;
+}

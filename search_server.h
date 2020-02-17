@@ -19,7 +19,7 @@ class InvertedIndex {
 public:
   InvertedIndex() = default;
 
-  explicit InvertedIndex(const vector<string> &documents) : InvertedIndex() {
+  explicit InvertedIndex(const vector<string> &documents) {
     Map<string, Map<size_t, size_t>> temp_index;
     vector<string> buffer(1000);
 
@@ -31,7 +31,7 @@ public:
       docid++;
     }
     for (const auto &[word, id_count_pair] : temp_index) {
-      this->index[word] = {id_count_pair.begin(), id_count_pair.end()};
+      this->index[move(word)] = {id_count_pair.begin(), id_count_pair.end()};
     }
     docs = move(documents);
   }
