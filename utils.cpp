@@ -4,25 +4,33 @@
 #include <thread>
 using namespace std;
 
-vector<string> SplitIntoWords(string_view line, vector<string> &words) {
-  // remove leading spaces
-  line.remove_prefix(min(line.find_first_not_of(' '), line.size()));
-  // peek separate words
-  size_t count = 0;
-  while (!line.empty()) {
-    auto not_space_pos = min(line.find_first_of(' '), line.size());
-    auto word = string(line.substr(0, not_space_pos));
-    line.remove_prefix(not_space_pos);
-
-    words[count++] = move(word);
-    auto space_pos = min(line.find_first_not_of(' '), line.size());
-    line.remove_prefix(space_pos);
+void LeftStrip(string_view& sv) {
+  while (!sv.empty() && isspace(sv[0])) {
+    sv.remove_prefix(1);
   }
-  return {make_move_iterator(words.begin()),
-          make_move_iterator(next(words.begin(), count))};
 }
 
-vector<string> GetLines(istream &stream) {
+string_view ReadToken(string_view& sv) {
+  LeftStrip(sv);
+
+  auto pos = sv.find(' ');
+  auto result = sv.substr(0, pos);
+  sv.remove_prefix(pos != sv.npos ? pos : sv.size());
+  return result;
+}
+
+vector<string_view> SplitIntoWords(string_view str) {
+  vector<string_view> result;
+
+  for (string_view word = ReadToken(str); !word.empty();
+       word = ReadToken(str)) {
+    result.push_back(word);
+  }
+
+  return result;
+}
+
+vector<string> GetLines(istream& stream) {
   vector<string> lines(50'000);
   size_t count = 0;
   for (string line; getline(stream, line);) {

@@ -12,43 +12,44 @@
 
 #define FIVE ((size_t)5)
 
-shared_mutex index_mutex;
+SearchServer::SearchServer(istream &documents_input)
+    : index({InvertedIndex(GetLines(documents_input))}) {}
 
-SearchServer::SearchServer(istream &documents_input) {
-  index = InvertedIndex(GetLines(documents_input));
+void UpdateIndex(istream &document_input, Synchronized<InvertedIndex> &index) {
+  InvertedIndex new_index(GetLines(document_input));
+  swap(index.GetAccess().ref_to_value, new_index);
 }
 
 void SearchServer::UpdateDocumentBase(istream &documents_input) {
-  update_futures.push_back(async([&documents_input, this]() {
-    auto new_index = InvertedIndex(GetLines(documents_input));
-    unique_lock lock(index_mutex);
-    swap(index, new_index);
-  }));
+  update_futures.push_back(
+      async(UpdateIndex, ref(documents_input), ref(index)));
 }
 
-string SearchServer::AddQueriesStreamSync(const vector<string> &queries) {
+string AddQueriesStreamSync(const vector<string> &queries,
+                            Synchronized<InvertedIndex> &index) {
   ostringstream result;
 
-  vector<string> buffer(10);
-  vector<size_t> docid_count; // document_id -> hitcount
+  vector<size_t> docid_count;  // document_id -> hitcount
   vector<size_t> ids;
 
   for (auto query : queries) {
-    fill(docid_count.begin(), docid_count.end(), 0);
-
-    unique_lock lock(index_mutex);
-    auto total_count = index.DocumentCount();
-    docid_count.assign(total_count, 0);
-    ids.resize(total_count);
-    // # of words <= 10 in query
-    for (const auto &word : SplitIntoWords(query, buffer)) {
-      // # documents <= 50k
-      auto counts = index.Lookup(word);
-      if (!counts.has_value()) {
-        continue;
-      }
-      for (const auto &[doc_id, doc_count] : counts.value()) {
-        docid_count[doc_id] += doc_count;
+    const auto words = SplitIntoWords(query);
+    {
+      auto index_access = index.GetAccess();
+      auto &index = index_access.ref_to_value;
+      auto total_count = index.DocumentCount();
+      docid_count.assign(total_count, 0);
+      ids.resize(total_count);
+      // # of words <= 10 in query
+      for (const auto &word : words) {
+        // # documents <= 50k
+        auto counts = index.Lookup(word);
+        if (!counts.has_value()) {
+          continue;
+        }
+        for (const auto &[doc_id, doc_count] : counts.value()) {
+          docid_count[doc_id] += doc_count;
+        }
       }
     }
 
@@ -62,8 +63,7 @@ string SearchServer::AddQueriesStreamSync(const vector<string> &queries) {
     result << query << ':';
     for (auto docid : Head(ids, min(ids.size(), FIVE))) {
       auto count = docid_count[docid];
-      if (count == 0)
-        break;
+      if (count == 0) break;
       result << " {"
              << "docid: " << docid << ", "
              << "hitcount: " << count << '}';
@@ -76,7 +76,6 @@ string SearchServer::AddQueriesStreamSync(const vector<string> &queries) {
 
 void SearchServer::AddQueriesStream(istream &query_input,
                                     ostream &search_results_output) {
-
   // # queries <= 500k
   vector<string> queries(500'000);
   size_t count = 0;
@@ -91,9 +90,8 @@ void SearchServer::AddQueriesStream(istream &query_input,
     const auto &[start, end] = GetChunkStartStop(queries, i, page_count);
     vector<string> sub_queries = {make_move_iterator(start),
                                   make_move_iterator(end)};
-    query_futures.push_back(async([this, sub_queries]() {
-      return SearchServer::AddQueriesStreamSync(sub_queries);
-    }));
+    query_futures.push_back(
+        async(AddQueriesStreamSync, sub_queries, ref(index)));
   }
   for (auto &query_thread : query_futures) {
     search_results_output << query_thread.get();

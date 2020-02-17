@@ -22,7 +22,7 @@ milliseconds random_time() { return milliseconds(value(_rd)); }
 
 void TestSearchServer(vector<pair<ifstream, ostream *>> &streams) {
   LOG_DURATION("Total");
-  SearchServer srv(streams.front().first); // Does not seem to read
+  SearchServer srv(streams.front().first);  // Does not seem to read
   int num = 0;
   int total = streams.size();
   for (auto &[input, output] :
@@ -43,18 +43,17 @@ void TestSearchServer(vector<pair<ifstream, ostream *>> &streams) {
 }
 
 class NullBuffer : public streambuf {
-public:
+ public:
   int overflow(int c) override { return c; }
 };
 
 int main() {
-  // TestRunner tr;
+  TestRunner tr;
   // RUN_TEST(tr, TestBasicSearch);
-  // RUN_TEST(tr, TestHitcount);
+  RUN_TEST(tr, TestHitcount);
   // RUN_TEST(tr, TestRanking);
   // RUN_TEST(tr, TestSerpFormat);
   // RUN_TEST(tr, TestTop5);
-  // return 0;
 
   // 1) Create an array of input and output streams
   vector<string> folders = {"2-test",     "3-test",     "4-test", "coursera",

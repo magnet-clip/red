@@ -1,6 +1,7 @@
 #pragma once
 
 #include "inverted_index.h"
+#include "synchronized.h"
 #include "utils.h"
 
 #include <future>
@@ -16,15 +17,14 @@
 using namespace std;
 
 class SearchServer {
-public:
+ public:
   SearchServer() = default;
   explicit SearchServer(istream &document_input);
   void UpdateDocumentBase(istream &document_input);
   void AddQueriesStream(istream &query_input, ostream &search_results_output);
 
-private:
-  string AddQueriesStreamSync(const vector<string> &queries);
+ private:
   vector<future<void>> update_futures;
   vector<future<string>> query_futures;
-  InvertedIndex index;
+  Synchronized<InvertedIndex> index;
 };

@@ -14,25 +14,22 @@
 #include <vector>
 
 using namespace std;
-
-using DocIds = vector<pair<size_t, size_t>>;
-using TempIndex = Map<string, Map<size_t, size_t>>;
+struct Entry {
+  size_t docid, count;
+};
+using DocIds = vector<Entry>;
 
 class InvertedIndex {
-public:
+ public:
   InvertedIndex() = default;
   explicit InvertedIndex(const vector<string> &documents);
 
-  optional<DocIds> Lookup(const string &word) const;
+  optional<DocIds> Lookup(const string_view &word) const;
 
   size_t DocumentCount() const { return this->docs.size(); }
   const string &GetDocument(size_t id) const { return this->docs[id]; }
 
-private:
-  void JoinTempIndices(TempIndex &main, TempIndex &addition);
-  TempIndex FillTempIndexAsync(const vector<string> &documents);
-  TempIndex FillTempIndexSync(const vector<string> &documents,
-                              size_t start_doc_id);
-  Map<string, DocIds> index;
+ private:
+  Map<string_view, DocIds> index;
   vector<string> docs;
 };
