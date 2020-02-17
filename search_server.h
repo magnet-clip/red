@@ -1,22 +1,22 @@
 #pragma once
 
+#include "utils.h"
 #include <future>
 #include <istream>
 #include <list>
 #include <map>
 #include <ostream>
 #include <set>
+#include <shared_mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <shared_mutex>
-#include "utils.h"
 using namespace std;
 
 using DocIds = vector<pair<size_t, size_t>>;
 
 class InvertedIndex {
- public:
+public:
   InvertedIndex() { this->docs.reserve(50'000); }
 
   explicit InvertedIndex(istream &documents) : InvertedIndex() {
@@ -30,8 +30,7 @@ class InvertedIndex {
       }
     }
     for (const auto &[word, id_count_pair] : temp_index) {
-      this->index[word] = {id_count_pair.begin(),
-                           id_count_pair.end()};
+      this->index[word] = {id_count_pair.begin(), id_count_pair.end()};
     }
   }
 
@@ -45,20 +44,19 @@ class InvertedIndex {
   size_t DocumentCount() const { return this->docs.size(); }
   const string &GetDocument(size_t id) const { return this->docs[id]; }
 
- private:
+private:
   Map<string, DocIds> index;
   vector<string> docs;
 };
 
 class SearchServer {
- public:
+public:
   SearchServer() = default;
-  explicit SearchServer(istream &document_input);
+  explicit SearchServer(istream &document_input) : index(document_input) {}
   void UpdateDocumentBase(istream &document_input);
   void AddQueriesStream(istream &query_input, ostream &search_results_output);
 
- private:
+private:
   vector<future<void>> futures;
-  shared_mutex index_mutex;
   InvertedIndex index;
 };

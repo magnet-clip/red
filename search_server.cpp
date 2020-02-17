@@ -8,16 +8,14 @@
 
 #define FIVE ((size_t)5)
 
-SearchServer::SearchServer(istream &document_input) : index(document_input) {
-}
+shared_mutex index_mutex;
 
 void SearchServer::UpdateDocumentBase(istream &document_input) {
-  futures.push_back(async(
-      [&document_input, this]() {
-        auto new_index = InvertedIndex(document_input);
-        unique_lock lock(index_mutex);
-        index = move(new_index);
-      }));
+  // futures.push_back(async([&document_input, this]() {
+  auto new_index = InvertedIndex(document_input);
+  unique_lock lock(index_mutex);
+  index = move(new_index);
+  // }));
 }
 
 void SearchServer::AddQueriesStream(istream &query_input,
@@ -34,22 +32,26 @@ void SearchServer::AddQueriesStream(istream &query_input,
     int64_t rhs_docid = rhs.first;
     auto rhs_hit_count = rhs.second;
     return make_pair(lhs_hit_count, -lhs_docid) >
-        make_pair(rhs_hit_count, -rhs_docid);
+           make_pair(rhs_hit_count, -rhs_docid);
   };
 
-  vector<size_t> docid_count(total_count);  // document_id -> hitcount
+  vector<size_t> docid_count(total_count); // document_id -> hitcount
   vector<pair<size_t, size_t>> search_results(total_count);
   vector<string> buffer(10);
 
   // # queries <= 500k
+  // vector<string> queries(500'000);
+  // for (string current_query; getline(query_input, current_query);) {
+  // }
   for (string current_query; getline(query_input, current_query);) {
     fill(docid_count.begin(), docid_count.end(), 0);
-    shared_lock lock(index_mutex);
+    // shared_lock lock(index_mutex);
     // # of words <= 10 in query
     for (const auto &word : SplitIntoWords(current_query, buffer)) {
       // # documents <= 50k
       auto counts = index.Lookup(word);
-      if (!counts.has_value()) continue;
+      if (!counts.has_value())
+        continue;
       for (const auto &[doc_id, doc_count] : counts.value()) {
         docid_count[doc_id] += doc_count;
       }
@@ -71,8 +73,8 @@ void SearchServer::AddQueriesStream(istream &query_input,
     }
 
     search_results_output << current_query << ':';
-    for (auto[docid, hitcount] :
-        Head(search_results, min(actual_count, FIVE))) {
+    for (auto [docid, hitcount] :
+         Head(search_results, min(actual_count, FIVE))) {
       search_results_output << " {"
                             << "docid: " << docid << ", "
                             << "hitcount: " << hitcount << '}';
