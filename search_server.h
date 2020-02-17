@@ -17,21 +17,23 @@ using DocIds = vector<pair<size_t, size_t>>;
 
 class InvertedIndex {
 public:
-  InvertedIndex() { this->docs.reserve(50'000); }
+  InvertedIndex() = default;
 
   explicit InvertedIndex(const vector<string> &documents) : InvertedIndex() {
     Map<string, Map<size_t, size_t>> temp_index;
     vector<string> buffer(1000);
+
+    size_t docid = 0;
     for (string document : documents) {
-      this->docs.push_back(document);
-      const size_t docid = this->docs.size() - 1;
-      for (const auto &word : SplitIntoWords(this->docs.back(), buffer)) {
+      for (const auto &word : SplitIntoWords(document, buffer)) {
         temp_index[word][docid]++;
       }
+      docid++;
     }
     for (const auto &[word, id_count_pair] : temp_index) {
       this->index[word] = {id_count_pair.begin(), id_count_pair.end()};
     }
+    docs = move(documents);
   }
 
   optional<DocIds> Lookup(const string &word) const {
