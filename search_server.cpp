@@ -1,4 +1,5 @@
 #include "search_server.h"
+#include "inverted_index.h"
 #include "iterator_range.h"
 #include "utils.h"
 
@@ -11,15 +12,6 @@
 #define FIVE ((size_t)5)
 
 shared_mutex index_mutex;
-
-const auto comparer = [](pair<size_t, size_t> lhs, pair<size_t, size_t> rhs) {
-  int64_t lhs_docid = lhs.first;
-  auto lhs_hit_count = lhs.second;
-  int64_t rhs_docid = rhs.first;
-  auto rhs_hit_count = rhs.second;
-  return make_pair(lhs_hit_count, -lhs_docid) >
-         make_pair(rhs_hit_count, -rhs_docid);
-};
 
 SearchServer::SearchServer(istream &documents_input) {
   index = InvertedIndex(GetLines(documents_input));
@@ -71,10 +63,10 @@ string SearchServer::AddQueriesStreamSync(const vector<string> &queries) {
     }
     const auto actual_end = next(search_results.begin(), actual_count);
     if (actual_count < FIVE) {
-      sort(search_results.begin(), actual_end, comparer);
+      sort(search_results.begin(), actual_end, ComparePairs);
     } else {
       partial_sort(search_results.begin(), next(search_results.begin(), FIVE),
-                   actual_end, comparer);
+                   actual_end, ComparePairs);
     }
 
     result << query << ':';
@@ -101,8 +93,7 @@ void SearchServer::AddQueriesStream(istream &query_input,
   }
   queries.resize(count);
 
-  const size_t page_count =
-      thread::hardware_concurrency() != 0 ? thread::hardware_concurrency() : 8;
+  const size_t page_count = GetPagesCount();
 
   for (size_t i = 0; i < page_count; i++) {
     query_futures.push_back(

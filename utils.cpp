@@ -1,6 +1,7 @@
 #include "utils.h"
 #include <iterator>
 #include <sstream>
+#include <thread>
 using namespace std;
 
 vector<string> SplitIntoWords(string_view line, vector<string> &words) {
@@ -29,4 +30,18 @@ vector<string> GetLines(istream &stream) {
   }
   lines.resize(count);
   return lines;
+}
+
+bool ComparePairs(pair<size_t, size_t> lhs, pair<size_t, size_t> rhs) {
+  int64_t lhs_docid = lhs.first;
+  auto lhs_hit_count = lhs.second;
+  int64_t rhs_docid = rhs.first;
+  auto rhs_hit_count = rhs.second;
+  return make_pair(lhs_hit_count, -lhs_docid) >
+         make_pair(rhs_hit_count, -rhs_docid);
+};
+
+size_t GetPagesCount() {
+  return thread::hardware_concurrency() != 0 ? thread::hardware_concurrency()
+                                             : DEFAULT_PAGES;
 }
