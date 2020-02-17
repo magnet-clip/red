@@ -41,7 +41,7 @@ bool ComparePairs(pair<size_t, size_t> lhs, pair<size_t, size_t> rhs) {
          make_pair(rhs_hit_count, -rhs_docid);
 };
 
-size_t GetPagesCount() {
+size_t GetThreadsCount() {
   return thread::hardware_concurrency() != 0 ? thread::hardware_concurrency()
                                              : DEFAULT_PAGES;
 }

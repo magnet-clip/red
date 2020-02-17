@@ -30,8 +30,9 @@ public:
 
 private:
   void JoinTempIndices(TempIndex &main, TempIndex &addition);
-  TempIndex FillIndexAsync(const vector<string> &documents);
-  TempIndex FillIndexSync(const vector<string> &documents, size_t start_doc_id);
+  TempIndex FillTempIndexAsync(const vector<string> &documents);
+  TempIndex FillTempIndexSync(const vector<string> &documents,
+                              size_t start_doc_id);
   Map<string, DocIds> index;
   vector<string> docs;
 };

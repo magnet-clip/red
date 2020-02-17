@@ -62,7 +62,7 @@ int main() {
   NullBuffer null_buffer;
   ostream null_stream(&null_buffer);
   vector<pair<ifstream, ostream *>> streams;
-  for (int i = 0; i < 1; i++) {
+  for (int i = 0; i < 3; i++) {
     for (const auto &folder : folders) {
       streams.push_back(make_pair<ifstream, ostream *>(
           ifstream("../test/" + folder + "/documents.txt"), nullptr));

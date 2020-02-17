@@ -1,16 +1,17 @@
 #include "inverted_index.h"
 
 InvertedIndex::InvertedIndex(const vector<string> &documents) {
-  // auto temp_index = FillIndexAsync(documents);
-  auto temp_index = FillIndexSync(documents, 0);
+  // auto temp_index = FillTempIndexAsync(documents);
+  auto temp_index = FillTempIndexSync(documents, 0);
   for (const auto &[word, id_count_pair] : temp_index) {
-    this->index[move(word)] = {id_count_pair.begin(), id_count_pair.end()};
+    this->index[move(word)] = {make_move_iterator(id_count_pair.begin()),
+                               make_move_iterator(id_count_pair.end())};
   }
   docs = move(documents);
 }
 
-TempIndex InvertedIndex::FillIndexSync(const vector<string> &documents,
-                                       size_t start_doc_id = 0) {
+TempIndex InvertedIndex::FillTempIndexSync(const vector<string> &documents,
+                                           size_t start_doc_id = 0) {
   TempIndex temp_index;
   vector<string> buffer(1000);
 
@@ -23,23 +24,16 @@ TempIndex InvertedIndex::FillIndexSync(const vector<string> &documents,
   return temp_index;
 }
 
-TempIndex InvertedIndex::FillIndexAsync(const vector<string> &documents) {
+TempIndex InvertedIndex::FillTempIndexAsync(const vector<string> &documents) {
   TempIndex temp_index;
   vector<future<TempIndex>> futures;
-  const size_t page_count = GetPagesCount();
+  const size_t page_count = GetThreadsCount();
 
   for (size_t i = 0; i < page_count; i++) {
     futures.push_back(async([&documents, page_count, i, this]() {
+      const auto &[start, end] = GetChunkStartStop(documents, i, page_count);
       const size_t page_size = documents.size() / page_count;
-      auto start = documents.begin() + i * page_size;
-      vector<string>::const_iterator end;
-      if (i == page_count - 1) {
-        end = documents.end();
-      } else {
-        end = start + page_size;
-      }
-
-      return FillIndexSync({start, end}, i * page_size);
+      return FillTempIndexSync({start, end}, i * page_size);
     }));
   }
   for (auto &index_thread : futures) {
