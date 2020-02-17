@@ -4,50 +4,67 @@
 
 #include <algorithm>
 #include <iostream>
+#include <sstream>
 #include <unordered_set>
 
 #define FIVE ((size_t)5)
 
 shared_mutex index_mutex;
 
-void SearchServer::UpdateDocumentBase(istream &document_input) {
-  // futures.push_back(async([&document_input, this]() {
-  auto new_index = InvertedIndex(document_input);
+const auto comparer = [](pair<size_t, size_t> lhs, pair<size_t, size_t> rhs) {
+  int64_t lhs_docid = lhs.first;
+  auto lhs_hit_count = lhs.second;
+  int64_t rhs_docid = rhs.first;
+  auto rhs_hit_count = rhs.second;
+  return make_pair(lhs_hit_count, -lhs_docid) >
+         make_pair(rhs_hit_count, -rhs_docid);
+};
+
+SearchServer::SearchServer(istream &documents_input) {
+  vector<string> documents(50'000);
+  size_t count = 0;
+  for (string document; getline(documents_input, document);) {
+    documents[count++] = document;
+  }
+  documents.resize(count);
+  index = InvertedIndex(documents);
+}
+
+void SearchServer::UpdateDocumentBase(istream &documents_input) {
+  vector<string> documents(50'000);
+  size_t count = 0;
+  for (string document; getline(documents_input, document);) {
+    documents[count++] = document;
+  }
+  documents.resize(count);
+
+  // update_futures.push_back(async([documents, this]() {
+  auto new_index = InvertedIndex(documents);
   unique_lock lock(index_mutex);
   index = move(new_index);
   // }));
 }
 
-void SearchServer::AddQueriesStream(istream &query_input,
-                                    ostream &search_results_output) {
+string SearchServer::AddQueriesStreamSync(const vector<string> &queries) {
   size_t total_count;
   {
     shared_lock lock(index_mutex);
     total_count = index.DocumentCount();
   }
 
-  const auto comparer = [](pair<size_t, size_t> lhs, pair<size_t, size_t> rhs) {
-    int64_t lhs_docid = lhs.first;
-    auto lhs_hit_count = lhs.second;
-    int64_t rhs_docid = rhs.first;
-    auto rhs_hit_count = rhs.second;
-    return make_pair(lhs_hit_count, -lhs_docid) >
-           make_pair(rhs_hit_count, -rhs_docid);
-  };
+  ostringstream result;
 
+  vector<string> buffer(10);
   vector<size_t> docid_count(total_count); // document_id -> hitcount
   vector<pair<size_t, size_t>> search_results(total_count);
-  vector<string> buffer(10);
 
-  // # queries <= 500k
-  // vector<string> queries(500'000);
-  // for (string current_query; getline(query_input, current_query);) {
-  // }
-  for (string current_query; getline(query_input, current_query);) {
+  for (auto query : queries) {
+    // cerr << this_thread::get_id() << ": query = " << query << endl;
     fill(docid_count.begin(), docid_count.end(), 0);
-    // shared_lock lock(index_mutex);
+
+    shared_lock lock(index_mutex);
     // # of words <= 10 in query
-    for (const auto &word : SplitIntoWords(current_query, buffer)) {
+    for (const auto &word : SplitIntoWords(query, buffer)) {
       // # documents <= 50k
       auto counts = index.Lookup(word);
       if (!counts.has_value())
@@ -64,21 +81,60 @@ void SearchServer::AddQueriesStream(istream &query_input,
         search_results[actual_count++] = {i, docid_count[i]};
       }
     }
-    const auto actual_end = next(begin(search_results), actual_count);
+    const auto actual_end = next(search_results.begin(), actual_count);
     if (actual_count < FIVE) {
-      sort(begin(search_results), actual_end, comparer);
+      sort(search_results.begin(), actual_end, comparer);
     } else {
-      partial_sort(begin(search_results), next(begin(search_results), FIVE),
+      partial_sort(search_results.begin(), next(search_results.begin(), FIVE),
                    actual_end, comparer);
     }
 
-    search_results_output << current_query << ':';
+    result << query << ':';
     for (auto [docid, hitcount] :
          Head(search_results, min(actual_count, FIVE))) {
-      search_results_output << " {"
-                            << "docid: " << docid << ", "
-                            << "hitcount: " << hitcount << '}';
+      result << " {"
+             << "docid: " << docid << ", "
+             << "hitcount: " << hitcount << '}';
     }
-    search_results_output << endl;
+    result << endl;
   }
+
+  return result.str();
+}
+
+void SearchServer::AddQueriesStream(istream &query_input,
+                                    ostream &search_results_output) {
+
+  // # queries <= 500k
+  vector<string> queries(500'000);
+  size_t count = 0;
+  for (string current_query; getline(query_input, current_query);) {
+    queries[count++] = current_query;
+  }
+  queries.resize(count);
+
+  // return AddQueriesStreamSync(queries, search_results_output);
+
+  const size_t page_count = 8;
+
+  for (size_t i = 0; i < page_count; i++) {
+    query_futures.push_back(async([this, queries, i, &search_results_output]() {
+      const size_t page_step = queries.size() / page_count;
+      auto start = queries.begin();
+      if (i > 0) {
+        start += i * page_step;
+      }
+      vector<string>::const_iterator end;
+      if (i == page_count - 1) {
+        end = queries.end();
+      } else {
+        end = start + page_step;
+      }
+      return SearchServer::AddQueriesStreamSync({start, end});
+    }));
+  }
+  for (auto &query_thread : query_futures) {
+    search_results_output << query_thread.get();
+  }
+  query_futures.clear();
 }

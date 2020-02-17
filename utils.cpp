@@ -1,5 +1,6 @@
 #include "utils.h"
-
+#include <iterator>
+#include <sstream>
 using namespace std;
 
 vector<string> SplitIntoWords(string_view line, vector<string> &words) {
@@ -16,5 +17,6 @@ vector<string> SplitIntoWords(string_view line, vector<string> &words) {
     auto space_pos = min(line.find_first_not_of(' '), line.size());
     line.remove_prefix(space_pos);
   }
-  return {make_move_iterator(words.begin()), make_move_iterator(next(words.begin(), count))};
+  return {make_move_iterator(words.begin()),
+          make_move_iterator(next(words.begin(), count))};
 }

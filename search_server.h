@@ -2,10 +2,10 @@
 
 #include "utils.h"
 #include <future>
+#include <iostream>
 #include <istream>
 #include <list>
 #include <map>
-#include <ostream>
 #include <set>
 #include <shared_mutex>
 #include <string>
@@ -19,10 +19,10 @@ class InvertedIndex {
 public:
   InvertedIndex() { this->docs.reserve(50'000); }
 
-  explicit InvertedIndex(istream &documents) : InvertedIndex() {
-    vector<string> buffer(1000);
+  explicit InvertedIndex(const vector<string> &documents) : InvertedIndex() {
     Map<string, Map<size_t, size_t>> temp_index;
-    for (string document; getline(documents, document);) {
+    vector<string> buffer(1000);
+    for (string document : documents) {
       this->docs.push_back(document);
       const size_t docid = this->docs.size() - 1;
       for (const auto &word : SplitIntoWords(this->docs.back(), buffer)) {
@@ -52,11 +52,13 @@ private:
 class SearchServer {
 public:
   SearchServer() = default;
-  explicit SearchServer(istream &document_input) : index(document_input) {}
+  explicit SearchServer(istream &document_input);
   void UpdateDocumentBase(istream &document_input);
   void AddQueriesStream(istream &query_input, ostream &search_results_output);
 
 private:
-  vector<future<void>> futures;
+  string AddQueriesStreamSync(const vector<string> &queries);
+  vector<future<void>> update_futures;
+  vector<future<string>> query_futures;
   InvertedIndex index;
 };
